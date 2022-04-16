@@ -77,54 +77,82 @@ resource "aws_security_group" "sg_keeper" {
 }
 
 # Firewall rules
-resource "aws_security_group_rule" "sg_rules_keeper_in" {
-  count = length(var.ingress_rules)
-
+resource "aws_security_group_rule" "sg_rules_in_ssh" {
   type              = "ingress"
-  from_port         = var.ingress_rules[count.index].from_port
-  to_port           = var.ingress_rules[count.index].to_port
-  protocol          = var.ingress_rules[count.index].protocol
-  cidr_blocks       = [var.ingress_rules[count.index].cidr_block]
-  description       = var.ingress_rules[count.index].description
+  from_port         = 22
+  to_port           = 22
+  protocol          = "tcp"
+  cidr_blocks       = var.ingress_cidr_blocks_ssh
+  description       = "SSH" 
   security_group_id = aws_security_group.sg_keeper.id
 }
 
-resource "aws_security_group_rule" "sg_rules_keeper_out" {
+resource "aws_security_group_rule" "sg_rules_in_http" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  cidr_blocks       = var.ingress_cidr_blocks_web
+  description       = "WEB" 
+  security_group_id = aws_security_group.sg_keeper.id
+}
+
+resource "aws_security_group_rule" "sg_rules_in_https" {
+  type              = "ingress"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = var.ingress_cidr_blocks_web
+  description       = "WEB" 
+  security_group_id = aws_security_group.sg_keeper.id
+}
+
+resource "aws_security_group_rule" "sg_rules_in_keeper" {
+  type              = "ingress"
+  from_port         = 5959
+  to_port           = 5959
+  protocol          = "tcp"
+  cidr_blocks       = var.ingress_cidr_blocks_keeper
+  description       = "Keeper" 
+  security_group_id = aws_security_group.sg_keeper.id
+}
+
+resource "aws_security_group_rule" "sg_rules_out" {
   type              = "egress"
   to_port           = 0
   protocol          = "-1"
   from_port         = 0
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = var.egress_cidr_blocks
   security_group_id = aws_security_group.sg_keeper.id
 }
 
 resource "aws_instance" "keeper" {
   ami           		 = "ami-08ca3fed11864d6bb"
-  instance_type 		 = "t2.medium"
+  instance_type 		 = "t2.large"
   count         		 = 1
   vpc_security_group_ids = [
     aws_security_group.sg_keeper.id
   ]
 
-  subnet_id     	       = aws_subnet.subnet_keeper.id
-  associate_public_ip_address  = true
-  key_name                     = aws_key_pair.keeper.key_name
-  user_data_base64             = base64encode(templatefile("./initscript.sh", {
-    address1                   = var.address1
-    key1                       = var.key1
-    address2                   = var.address2
-    key2                       = var.key2
-    address3                   = var.address3
-    key3                       = var.key3
-    address4                   = var.address4
-    key4                       = var.key4
-    address5                   = var.address5
-    key5                       = var.key5
-    address6                   = var.address6
-    key6                       = var.key6
-    address7                   = var.address7
-    key7                       = var.key7
-    gateway_uri                = var.gateway_uri
+  subnet_id     	         = aws_subnet.subnet_keeper.id
+  associate_public_ip_address    = true
+  key_name                       = aws_key_pair.keeper.key_name
+  user_data_base64               = base64encode(templatefile("./initscript.sh", {
+    SWAPPER_ADDRESS              = var.SWAPPER_ADDRESS
+    SWAPPER_ADDRESS_KEY          = var.SWAPPER_ADDRESS_KEY
+    CLOSER_ADDRESS               = var.CLOSER_ADDRESS
+    CLOSER_ADDRESS_KEY           = var.CLOSER_ADDRESS_KEY
+    DISTRIBUTOR_ADDRESS          = var.DISTRIBUTOR_ADDRESS
+    DISTRIBUTOR_ADDRESS_KEY      = var.DISTRIBUTOR_ADDRESS_KEY
+    DISTRIBUTOR_V2_ADDRESS       = var.DISTRIBUTOR_V2_ADDRESS
+    DISTRIBUTOR_V2_ADDRESS_KEY   = var.DISTRIBUTOR_V2_ADDRESS_KEY
+    HARVESTER_ADDRESS            = var.HARVESTER_ADDRESS
+    HARVESTER_ADDRESS_KEY        = var.HARVESTER_ADDRESS_KEY
+    REPORTER_ADDRESS             = var.REPORTER_ADDRESS
+    REPORTER_ADDRESS_KEY         = var.REPORTER_ADDRESS_KEY
+    REX_BANK_KEEPER_ADDRESS      = var.REX_BANK_KEEPER_ADDRESS
+    REX_BANK_KEEPER_ADDRESS_KEY  = var.REX_BANK_KEEPER_ADDRESS_KEY
+    gateway_uri                  = var.gateway_uri
     gateway_wss                = var.gateway_wss
     airflow_password           = var.airflow_password
     postgres_password          = var.postgres_password

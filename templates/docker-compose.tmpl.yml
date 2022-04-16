@@ -1,9 +1,6 @@
 ---
 version: '3'
 
-networks:
-  monitoring:
-
 volumes:
   postgres-db-volume:
 
@@ -75,9 +72,10 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
+    container_name: airflow-webserver
     command: webserver
     ports:
-      - "80:8080"
+      - "8080:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 10s
@@ -244,28 +242,17 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-### Monitoring ###
-  statsd_exporter:
-    image: prom/statsd-exporter:v0.18.0
-    container_name: statsd_exporter
-    restart: always
-    volumes:
-      - ./statsd/statsd_mapping.yml:/tmp/statsd_mapping.yml
-    ports:
-      - "9102:9102"
-      - "9125:9125/udp"
-    command: --statsd.mapping-config=/tmp/statsd_mapping.yml
-    networks:
-      - monitoring
 
-  promtail:
-    image: grafana/promtail:latest
-    container_name: promtail
+  airflow-nginx:
+    build: ./nginx
     ports:
-      - "9080:9080"
-    volumes:
-      - ./logs/:/var/log
-      - ./promtail:/etc/promtail-config/
-    command: -config.file=/etc/promtail-config/promtail.yml
-    networks:
-      - monitoring
+      - "80:80"
+      - "443:443"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    depends_on:
+      - airflow-webserver

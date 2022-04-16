@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -x
 # the directory containing the script file
 dir="$(cd "$(dirname "$0")"; pwd)"
 cd "$dir"
@@ -24,7 +24,7 @@ usage() {
 
 # check if docker-compose is intalled 
 init() {
-    cp templates/vars.tmpl .vars
+    cp templates/.vars.tmpl .vars
     if [[ -z $(which docker-compose && which docker) ]] && [[ ${docker-compose -v} != *2.2.3* ]]
     then
         log check docker and docker-compose
@@ -50,8 +50,8 @@ setup() {
 deploy() {
     # run the keeper via docker-compose
     docker-compose -f docker-compose.yml  up -d && \
-    docker exec `docker ps |grep "ricochet-keeper_airflow-webserver" | awk '{ print $1}' ` airflow connections import /opt/variables/connections.json && \
-    docker exec `docker ps |grep "ricochet-keeper_airflow-webserver" | awk '{ print $1}' ` airflow variables import /opt/variables/variables.json 
+    docker exec `docker ps |grep "airflow-webserver" | awk '{ print $1}' ` airflow connections import /opt/variables/connections.json && \
+    docker exec `docker ps |grep "airflow-webserver" | awk '{ print $1}' ` airflow variables import /opt/variables/variables.json
 }    
 
 debug() {
